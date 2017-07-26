@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="12d6d0bd-4380-4b93-91cf-e66a4a91d675" name="tomcat" url="http://localhost:8080/D3Study">
+        <fileTransfer port="0" mountedRoot="D:\Program Files\apache-tomcat-8.5.16\webapps\D3Study" accessType="MOUNT" />
+      </webServer>
+    </option>
+  </component>
+</project>
