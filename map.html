@@ -11,10 +11,15 @@
 
 <div id="map"></div>
 
+<div id="tooltip" class="hidden">
+    <p><strong>数量：</strong><span id="number">100</span></p>
+</div>
+
 <script src="d3/queue.v1.min.js"></script>
 <script src="d3/topojson.v1.min.js"></script>
 <script src="d3/d3.v3.min.js"></script>
 <script src="js/drawMap.js"></script>
+<script src="js/util.js"></script>
 
 <script>
     var nodes = [];
@@ -25,8 +30,8 @@
     var textColor= "black";
 
     var svg = d3.select("#map").append("svg");
-    drawMap("mapdata/sichuan.json", svg);
+    drawProviceMap("mapdata/sichuan.json", svg);
 </script>
-	
+
 </body>  
 </html>  

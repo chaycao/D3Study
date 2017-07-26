@@ -1,4 +1,4 @@
-function drawMap(mapPath, svg) {
+function drawProviceMap(mapPath, svg) {
     var width  = 1000;
     var height = 1000;
 
@@ -8,8 +8,8 @@ function drawMap(mapPath, svg) {
         .attr("transform", "translate(0,0)");
 
     var projection = d3.geo.mercator()
-        .center([106, 27])
-        .scale(3000)
+        .center([107, 26])
+        .scale(2800)
         .translate([width/2, height/2]);
 
     var path = d3.geo.path()
@@ -22,7 +22,6 @@ function drawMap(mapPath, svg) {
 
     var colorA = d3.rgb(255,0,0); //红色
     var colorB = d3.rgb(248,248,255); // 白色
-
     // computeColor(i)，i为0~1，输出colorA、colorB之间的数
     var computeColor = d3.interpolate(colorB,colorA);
     var compute = d3.scale.linear()
@@ -33,39 +32,67 @@ function drawMap(mapPath, svg) {
         if (error)
             return console.error(error);
 
-        // 画地图
+        // 画省地图
         svg.selectAll("path")
             .data(states.features)
             .enter()
             .append("path")
+            .attr("class","pathProvince")
             .attr("stroke", "#000")
             .attr("stroke-width", 0.3)
-            .attr("d", path )
-            // 填充颜色
-            .style("fill", function(d, i){
-                var temp_n = 1.2;
+            .attr("d", path)
+            // 对数量进行匹配，保存在number属性中
+            .attr("number", function (d, i) {
+                var n = 0;
                 for (var j = 0; j < counts.length; j++) {
-                    if(counts[j].name == states.features[i].properties.name) {
-                        temp_n = counts[j].value;
+                    if(counts[j].name == d.properties.name) {
+                        n = counts[j].value;
                         break;
                     }
                 }
+                return n;
+            })
+            .attr("id", function (d, i) {
+                return d.properties.id;
+            })
+            // 填充颜色
+            .style("fill", function(d, i){
+                var temp_n = d3.select(this).attr("number");
                 var m = compute(temp_n);
-                console.log(i)
-                console.log(temp_n)
-                console.log(m)
                 return computeColor(m);
             })
             .on("mouseover",function(d,i){
                 d3.select(this)
                     .attr("stroke", "#ee05be");
-                tooltip.style("left", (d3.event.pageX) + "px")
-                    .style("top", (d3.event.pageY) + "px");
+                // 添加提示信息
+                var centroid = path.centroid(d);
+                var x = centroid[0];
+                var y = centroid[1] + 10;
+                var number = d3.select(this).attr("number");
+                var tooltip = d3.select("#tooltip")
+                    .style("left", x + "px")
+                    .style("top", y + "px");
+                tooltip.select("#number").text(number);
+                d3.select("#tooltip").classed("hidden", false);
             })
             .on("mouseout",function (d,i) {
                 d3.select(this)
                     .attr("stroke", "#000")
-            });
+                d3.select("#tooltip").classed("hidden", true);
+            })
+            // 点击，进入市级地图
+            .on("click",function (d,i) {
+                // 获得市ID
+                var id = d3.select(this).attr("id");
+                // 消除
+                d3.select("#tooltip").classed("hidden", true);
+                d3.selectAll(".city_name").remove();
+                d3.selectAll(".pathProvince").remove();
+                // 绘制市级地图
+                console.log(id);
+                drawCoutryMap(id, svg);
+            })
+        ;
 
         //获取中心点坐标
         states.features.forEach(function (d, i) {
@@ -88,10 +115,63 @@ function drawMap(mapPath, svg) {
                 .attr("fill",textColor).attr("font-size","12px").attr("fill-opacity",1)
                 .text(d.name);
         })
-
-        console.log(states.features)
-        console.log(states.features[0].properties.name);
     }
+}
 
+function drawCoutryMap(id, svg) {
+    var width  = 1000;
+    var height = 1000;
 
+    queue()
+        .defer(d3.json, "mapdata/geometryCouties/" + id + "00.json")
+        .await(ready);
+
+    function ready(error, states) {
+        if (error)
+            return console.error(error);
+        var zoomScale = getZoomScale(states.features, width, height);
+        var centers = getCenters(states.features);
+        var projection = d3.geo.mercator()
+            .center(centers)
+            .scale(zoomScale*25)
+            .translate([width/3, height/3]);
+        var path = d3.geo.path()
+            .projection(projection);
+
+        // 画市地图
+        svg.selectAll("path")
+            .data(states.features)
+            .enter()
+            .append("path")
+            .attr("class", "pathCountry")
+            .attr("stroke", "#000")
+            .attr("stroke-width", 0.3)
+            .attr("d", path)
+            // 填充颜色
+            .style("fill", "#f8f8ff");
+
+        //获取中心点坐标
+        states.features.forEach(function (d, i) {
+            var centroid = path.centroid(d);
+            centroid.x = centroid[0];
+            centroid.y = centroid[1];
+            centroid.id = d.properties.id;
+            centroid.name = d.properties.name;
+            centroid.feature = d;
+            provinceNodes.push(centroid);
+        })
+
+        // 加上名字
+        provinceNodes.forEach(function (d) {
+            svg.append("text")
+                .attr("class", "city_name")
+                .attr("dx", d.x)
+                .attr("dy", d.y)
+                .attr("text-anchor","middle")
+                .attr("fill",textColor).attr("font-size","12px").attr("fill-opacity",1)
+                .text(d.name);
+        })
+
+        provinceNodes.clean()
+    }
 }
